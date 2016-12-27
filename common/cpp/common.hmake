@@ -1,0 +1,19 @@
+---
+format: hypermake.v0
+
+targets:
+  build-common-[arch:amd64,armhf]:
+    description: common C++ library
+    after:
+      - build-cxxopts
+    watches:
+      - inc
+      - src
+      - CMakeList.txt
+      - /cmake
+    env:
+      - MAKE_OPTS
+    cmds:
+      - build-cmake.sh $[arch] common/cpp Release libcmn.a
+    artifacts:
+      - /out/$[arch]/lib/libcmn.a
