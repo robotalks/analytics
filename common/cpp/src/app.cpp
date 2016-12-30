@@ -2,6 +2,7 @@
 #include <limits.h>
 #include <exception>
 #include <iostream>
+#include <functional>
 #include "cmn/app.h"
 
 namespace cmn {
@@ -21,6 +22,40 @@ static ::std::string exeFullPath(const char *argv0) {
     }
 }
 
+class ModuleLifecycle {
+public:
+    ModuleLifecycle(::std::vector<AppModule*> modules)
+    : m_modules(modules), m_startedTo(-1) {
+
+    }
+
+    ~ModuleLifecycle() {
+        reverse(m_startedTo, [](AppModule* module) { module->stop(); });
+        reverse(m_modules.size() - 1, [](AppModule* module) { module->cleanup(); });
+    }
+
+    void start() {
+        for (auto module : m_modules) {
+            module->start();
+            m_startedTo ++;
+        }
+    }
+
+private:
+    ::std::vector<AppModule*> m_modules;
+    size_t m_startedTo;
+
+    void reverse(size_t start, std::function<void(AppModule*)> fn) {
+        for (size_t i = start; i >= 0; i --) {
+            try {
+                fn(m_modules[i]);
+            } catch (std::exception& e) {
+                std::cerr << e.what() << std::endl;
+            }
+        }
+    }
+};
+
 Application::Application(int argc, char **argv)
 : m_argc(argc), m_argv(argv),
   m_name(appName(argv[0])), m_exeFile(exeFullPath(argv[0])),
@@ -29,12 +64,16 @@ Application::Application(int argc, char **argv)
 
 int Application::main() {
     m_options.parse(m_argc, m_argv);
+    ModuleLifecycle modules(m_modules);
+    int exitCode = 0;
     try {
-        return run();
+        modules.start();
+        exitCode = run();
     } catch (std::exception& e) {
         std::cerr << e.what() << std::endl;
         throw;
     }
+    return exitCode;
 }
 
 ::std::string Application::exeDir() const {
@@ -43,6 +82,11 @@ int Application::main() {
         return m_exeFile.substr(0, pos);
     }
     return "";
+}
+
+void Application::addModule(AppModule *module) {
+    module->initialize(this);
+    m_modules.push_back(module);
 }
 
 }

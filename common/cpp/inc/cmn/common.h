@@ -5,6 +5,7 @@
 #endif
 #include <cmath>
 #include <list>
+#include <memory>
 #include <algorithm>
 #include <functional>
 

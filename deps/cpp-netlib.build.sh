@@ -25,3 +25,7 @@ make install DESTDIR=./_install
 
 mkdir -p $OUT_DIR
 cp -rf _install/usr/local/* $OUT_DIR/
+
+# patch include<asio/ip/address.hpp> in boost/network/uri/builder.hpp
+# FIXME: remove this patch when cpp-netlib 0.13 is officially released
+sed -i -r 's!(#include <)asio/!\1boost/asio/!g' $OUT_DIR/include/boost/network/uri/builder.hpp

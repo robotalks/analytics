@@ -6,6 +6,9 @@ targets:
     description: common C++ library
     after:
       - build-cxxopts
+      - build-boost-$[arch]
+      - build-cpp-netlib-$[arch]
+      - build-mosquitto-$[arch]
     watches:
       - inc
       - src

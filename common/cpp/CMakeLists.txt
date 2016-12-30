@@ -4,4 +4,8 @@ include(common)
 
 project(libcmn CXX)
 
-add_library(cmn STATIC src/app.cpp)
+add_library(cmn STATIC
+    src/app.cpp
+    src/pubsub.cpp
+    src/mqtt.cpp
+)

@@ -1,94 +1,49 @@
 #include <iostream>
+#include <atomic>
+#include <mutex>
+#include <condition_variable>
+#include <boost/asio/buffer.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include "cmn/app.h"
+#include "cmn/pubsub.h"
+#include "cmn/mqtt.h"
 #include "face_detector.h"
 
 using namespace std;
+using namespace boost::asio;
 using namespace cv;
 using namespace cmn;
 using namespace vision;
 
-class Capture {
-public:
-    Capture(const string& source)
-    : m_source(source), m_opened(false) {
-    }
-
-    bool opened() const { return m_opened; }
-
-    virtual bool read(Mat& m) = 0;
-
-protected:
-    string m_source;
-    bool m_opened;
-};
-
-class StreamCapture : public Capture {
-public:
-    StreamCapture(const string& source)
-    : Capture(source) {
-        m_opened = m_cap.open(source);
-    }
-
-    bool read(Mat& m) {
-        return m_cap.read(m);
-    }
-
-private:
-    VideoCapture m_cap;
-};
-
-class StillCapture : public Capture {
-public:
-    StillCapture(const string& source)
-    : Capture(source) {
-        m_opened = true;
-    }
-
-    bool read(Mat& m) {
-        cv::VideoCapture vcap(m_source);
-        if (vcap.isOpened()) {
-            return vcap.read(m);
-        }
-        return false;
-    }
-};
-
 class App : public cmn::Application {
 public:
     App(int argc, char** argv)
-        : cmn::Application(argc, argv) {
+        : cmn::Application(argc, argv),
+          m_pub(&m_mq) {
+        m_mq.addFactory(new MQTTFactory());
+        addModule(&m_mq);
+        m_pub.setHandler(std::bind(&App::onMessage, this, std::placeholders::_1));
+        addModule(&m_pub);
         options().add_options()
             ("show", "show recognized area", cxxopts::value<bool>())
-            ("still", "use still instead of video", cxxopts::value<bool>())
-            ("source", "media source", cxxopts::value<string>())
-            ("args", "arguments for module", cxxopts::value<vector<string>>())
         ;
-        options().parse_positional(vector<string>{"source", "args"});
     }
 
 protected:
     virtual int run() {
-        bool still = opt("still").as<bool>();
         bool show = opt("show").as<bool>();
 
-        auto source = opt("source").as<string>();
-        Capture *cap = still ? (Capture*)new StillCapture(source) : (Capture*)new StreamCapture(source);
-        if (!cap->opened()) {
-            cerr << "Error opening video stream or file" << endl;
-            return 1;
-        }
-
         FaceDetector detector(exeDir() + "/../share/OpenCV/", true, 2, 1, 60);
-        cv::Mat image;
+        Mat image;
 
         if (show) {
-            namedWindow("zpi1-vision");
+            namedWindow("vision");
         }
         while (true) {
-            if (!cap->read(image)) {
-                break;
+            if (!capture(image)) {
+                continue;
             }
+
             DetectResult result(&detector, image);
             if (!result.empty()) {
                 cout << result.json() << endl;
@@ -98,7 +53,7 @@ protected:
                 for (auto& obj : result.objects) {
                     rectangle(image, obj.rc, obj.type == "smile" ? Scalar(0, 255, 0) : Scalar(255, 0, 0));
                 }
-                imshow("zpi1-vision", image);
+                imshow("vision", image);
                 if (waitKey(500) >= 0) {
                     return 0;
                 }
@@ -108,6 +63,52 @@ protected:
             waitKey();
         }
         return 0;
+    }
+
+private:
+    MQConnector m_mq;
+    PubSub m_pub;
+
+    atomic<Msg*> m_msg;
+    mutex m_msg_lock;
+    condition_variable m_msg_cond;
+
+    bool capture(Mat& image) {
+        auto msg = m_msg.exchange(nullptr);
+        if (msg == nullptr) {
+            unique_lock<mutex> lock(m_msg_lock);
+            lock.lock();
+            msg = m_msg.exchange(nullptr);
+            if (msg == nullptr) {
+                m_msg_cond.wait(lock);
+                msg = m_msg.exchange(nullptr);
+            }
+            lock.unlock();
+        }
+        bool decoded = false;
+        if (msg != nullptr) {
+            decoded = decodeImage(msg->raw(), image);
+            delete msg;
+        }
+        return decoded;
+    }
+
+    bool decodeImage(const const_buffer& buf, Mat& image) {
+        auto size = buffer_size(buf);
+        if (size == 0) {
+            return false;
+        }
+        auto ptr = buffer_cast<const unsigned char*>(buf);
+        auto decoded = imdecode(Mat(1, size, CV_8UC1, const_cast<unsigned char*>(ptr)), IMREAD_UNCHANGED, &image);
+        return !decoded.empty();
+    }
+
+    void onMessage(const Msg* msg) {
+        auto existing = m_msg.exchange(msg->copy());
+        if (existing) {
+            delete existing;
+        }
+        m_msg_cond.notify_all();
     }
 };
 
