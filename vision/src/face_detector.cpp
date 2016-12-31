@@ -16,7 +16,7 @@ size_t FaceDetector::detect(const Mat& image, DetectedObjectList& objects) {
     size_t count = 0;
     DetectResult result(&m_frontalface, image);
     for (auto& obj : result.objects) {
-        cout << obj.json() << endl;
+        //cout << obj.json() << endl;
         auto subImg = image(obj.rc);
         if (!DetectResult(&m_eyes, subImg).empty()) {
             objects.push_back(obj);

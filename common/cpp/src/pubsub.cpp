@@ -66,7 +66,7 @@ namespace cmn {
 
     PubSub::PubSub(MQConnector* connector,
         const string& subTopicOpt, const string &pubTopicOpt)
-    : m_conn(connector), m_subOpt(subTopicOpt), m_pubOpt(subTopicOpt) {
+    : m_conn(connector), m_subOpt(subTopicOpt), m_pubOpt(pubTopicOpt) {
 
     }
 

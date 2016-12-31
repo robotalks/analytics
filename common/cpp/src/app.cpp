@@ -31,7 +31,7 @@ public:
 
     ~ModuleLifecycle() {
         reverse(m_startedTo, [](AppModule* module) { module->stop(); });
-        reverse(m_modules.size() - 1, [](AppModule* module) { module->cleanup(); });
+        reverse((int)m_modules.size() - 1, [](AppModule* module) { module->cleanup(); });
     }
 
     void start() {
@@ -45,8 +45,8 @@ private:
     ::std::vector<AppModule*> m_modules;
     size_t m_startedTo;
 
-    void reverse(size_t start, std::function<void(AppModule*)> fn) {
-        for (size_t i = start; i >= 0; i --) {
+    void reverse(int start, std::function<void(AppModule*)> fn) {
+        for (int i = start; i >= 0; i --) {
             try {
                 fn(m_modules[i]);
             } catch (std::exception& e) {
@@ -60,10 +60,15 @@ Application::Application(int argc, char **argv)
 : m_argc(argc), m_argv(argv),
   m_name(appName(argv[0])), m_exeFile(exeFullPath(argv[0])),
   m_options(m_name) {
+      m_options.add_options()("help", "help", cxxopts::value<bool>());
 }
 
 int Application::main() {
     m_options.parse(m_argc, m_argv);
+    if (opt("help").as<bool>()) {
+        std::cout << m_options.help() << std::endl;
+        return 2;
+    }
     ModuleLifecycle modules(m_modules);
     int exitCode = 0;
     try {

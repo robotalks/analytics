@@ -1,4 +1,5 @@
 #include <iostream>
+#include <chrono>
 #include <atomic>
 #include <mutex>
 #include <condition_variable>
@@ -7,6 +8,7 @@
 #include "cmn/app.h"
 #include "cmn/pubsub.h"
 #include "cmn/mqtt.h"
+#include "cmn/perflog.h"
 #include "face_detector.h"
 
 using namespace std;
@@ -20,11 +22,13 @@ public:
     App(int argc, char** argv)
         : cmn::Application(argc, argv),
           m_pub(&m_mq) {
-        m_mq.addFactory(new MQTTFactory());
+        m_msg = nullptr;
+        m_mq.addFactory(MQTTAdapter::factory());
         addModule(&m_mq);
         m_pub.setHandler(std::bind(&App::onMessage, this, std::placeholders::_1));
         addModule(&m_pub);
         options().add_options()
+            ("lbp", "use lbp detector", cxxopts::value<bool>())
             ("show", "show recognized area", cxxopts::value<bool>())
         ;
     }
@@ -33,12 +37,14 @@ protected:
     virtual int run() {
         bool show = opt("show").as<bool>();
 
-        FaceDetector detector(exeDir() + "/../share/OpenCV/", true, 2, 1, 60);
-        Mat image;
+        FaceDetector detector(exeDir() + "/../share/OpenCV/",
+            opt("lbp").as<bool>(), 2, 1, 60);
 
         if (show) {
             namedWindow("vision");
         }
+
+        Mat image;
         while (true) {
             if (!capture(image)) {
                 continue;
@@ -46,15 +52,14 @@ protected:
 
             DetectResult result(&detector, image);
             if (!result.empty()) {
-                cout << result.json() << endl;
-                cout.flush();
+                m_pub.pub(result.json().dump());
             }
             if (show) {
                 for (auto& obj : result.objects) {
                     rectangle(image, obj.rc, obj.type == "smile" ? Scalar(0, 255, 0) : Scalar(255, 0, 0));
                 }
                 imshow("vision", image);
-                if (waitKey(500) >= 0) {
+                if (waitKey(1) >= 0) {
                     return 0;
                 }
             }
@@ -76,14 +81,10 @@ private:
     bool capture(Mat& image) {
         auto msg = m_msg.exchange(nullptr);
         if (msg == nullptr) {
+            return false;
             unique_lock<mutex> lock(m_msg_lock);
-            lock.lock();
+            m_msg_cond.wait(lock, [this]{ return m_msg.load() != nullptr; });
             msg = m_msg.exchange(nullptr);
-            if (msg == nullptr) {
-                m_msg_cond.wait(lock);
-                msg = m_msg.exchange(nullptr);
-            }
-            lock.unlock();
         }
         bool decoded = false;
         if (msg != nullptr) {

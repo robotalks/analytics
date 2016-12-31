@@ -86,9 +86,18 @@ namespace cmn {
         void setHandler(MsgHandler handler) { m_handler = handler; }
         MsgHandler getHandler() const { return m_handler; }
 
-        ::std::future<void> pub(const ::boost::asio::const_buffer& data, const PubOptions&);
+        ::std::future<void> pub(const ::boost::asio::const_buffer& data, const PubOptions& opts = PubOptions());
         ::std::future<void> pub(const ::std::string& subTopic,
-            const ::boost::asio::const_buffer& data, const PubOptions&);
+            const ::boost::asio::const_buffer& data, const PubOptions& opts = PubOptions());
+
+        ::std::future<void> pub(const ::std::string& str, const PubOptions& opts = PubOptions()) {
+            return pub(::boost::asio::const_buffer(str.c_str(), str.length()), opts);
+        }
+
+        ::std::future<void> pub(const ::std::string& subTopic,
+            const ::std::string& str, const PubOptions& opts = PubOptions()) {
+            return pub(subTopic, ::boost::asio::const_buffer(str.c_str(), str.length()), opts);
+        }
 
     private:
         MQConnector* m_conn;

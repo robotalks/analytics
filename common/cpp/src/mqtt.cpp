@@ -2,6 +2,7 @@
 #include <sstream>
 #include <functional>
 #include <exception>
+#include <iostream>
 #include "cmn/mqtt.h"
 
 namespace cmn {
@@ -104,28 +105,61 @@ namespace cmn {
         static void message(struct mosquitto*, void* thiz, const struct mosquitto_message *msg) {
             reinterpret_cast<MQTTAdapter*>(thiz)->onMessage(msg);
         }
+
+        static void logging(struct mosquitto*, void* thiz, int level, const char* str) {
+            cerr << "mqtt: [log] " << str << endl; cerr.flush();
+        }
     };
 
-    MQAdapter* MQTTFactory::createAdapter(const uri& uri) {
-        if (uri.scheme() == "mqtt") {
-            auto adapter = new MQTTAdapter();
-            adapter->setHost(uri.host());
-            auto portStr = uri.port();
-            if (!portStr.empty()) {
-                auto port = atoi(portStr.c_str());
-                if (port > 0) {
-                    adapter->setPort(port);
+
+    class MQTTFactory : public MQAdapterFactory {
+    public:
+        MQAdapter* createAdapter(const uri& uri) {
+            if (uri.scheme() == "mqtt") {
+                auto adapter = new MQTTAdapter();
+                adapter->setHost(uri.host());
+                auto portStr = uri.port();
+                if (!portStr.empty()) {
+                    auto port = atoi(portStr.c_str());
+                    if (port > 0) {
+                        adapter->setPort(port);
+                    }
+                }
+                return adapter;
+            }
+            return nullptr;
+        }
+
+        static MQTTFactory* get() {
+            if (_instance == nullptr) {
+                lock_guard<mutex> g(_instanceLock);
+                if (_instance == nullptr) {
+                    _instance = new MQTTFactory();
                 }
             }
-            return adapter;
+            return _instance;
         }
-        return nullptr;
-    }
+
+    private:
+        MQTTFactory() {
+            mosquitto_lib_init();
+        }
+
+        ~MQTTFactory() {
+            mosquitto_lib_cleanup();
+        }
+
+        static MQTTFactory* _instance;
+        static mutex _instanceLock;
+    };
+
+    MQTTFactory* MQTTFactory::_instance;
+    mutex MQTTFactory::_instanceLock;
 
     MQTTAdapter::MQTTAdapter(const string& clientId)
     :   m_clientId(clientId),
         m_host("localhost"), m_port(1883),
-        m_keepalive(0) {
+        m_keepalive(60) {
         m_mosquitto = mosquitto_new(m_clientId.empty() ? nullptr : m_clientId.c_str(), true, this);
         mosquitto_connect_callback_set(m_mosquitto, MQTTCallbacks::connect);
         mosquitto_disconnect_callback_set(m_mosquitto, MQTTCallbacks::disconnect);
@@ -133,6 +167,7 @@ namespace cmn {
         mosquitto_unsubscribe_callback_set(m_mosquitto, MQTTCallbacks::unsubscribe);
         mosquitto_publish_callback_set(m_mosquitto, MQTTCallbacks::publish);
         mosquitto_message_callback_set(m_mosquitto, MQTTCallbacks::message);
+        //mosquitto_log_callback_set(m_mosquitto, MQTTCallbacks::logging);
     }
 
     MQTTAdapter::~MQTTAdapter() {
@@ -227,6 +262,12 @@ namespace cmn {
     void MQTTAdapter::onConnect(int rc) {
         lock_guard<mutex> g(m_connLock);
         complete_promise((promise<void>*)m_connOp, rc, "connect error");
+        if (rc == MOSQ_ERR_SUCCESS) {
+            lock_guard<mutex> g(m_subsLock);
+            for (auto& v : m_subs) {
+                mosquitto_subscribe(m_mosquitto, nullptr, v.first.c_str(), 0);
+            }
+        }
         m_connOp = nullptr;
     }
 
@@ -275,5 +316,9 @@ namespace cmn {
                 h(&m);
             }
         }
+    }
+
+    MQAdapterFactory* MQTTAdapter::factory() {
+        return MQTTFactory::get();
     }
 }

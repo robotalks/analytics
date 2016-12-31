@@ -67,6 +67,8 @@ namespace cmn {
             const ::boost::asio::const_buffer& data,
             const PubOptions&);
 
+        static MQAdapterFactory* factory();
+
     private:
         ::std::string m_clientId;
         ::std::string m_host;
@@ -92,10 +94,5 @@ namespace cmn {
         void onMessage(const struct mosquitto_message*);
 
         friend class MQTTCallbacks;
-    };
-
-    class MQTTFactory : public MQAdapterFactory {
-    public:
-        MQAdapter* createAdapter(const ::boost::network::uri::uri& uri);
     };
 }
