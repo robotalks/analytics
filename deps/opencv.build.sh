@@ -28,15 +28,11 @@ cmake $CMAKE_OPTS \
     -DBUILD_ZLIB=ON \
     -DBUILD_JASPER=ON \
     -DBUILD_OPENEXR=ON \
-    -DFFMPEG_INCLUDE_DIR=$OUT_DIR/include \
-    -DFFMPEG_LIB_DIR=$OUT_DIR/lib \
-    -DFFMPEG_CODEC_LIB=$OUT_DIR/lib/libavcodec.a \
-    -DFFMPEG_FORMAT_LIB=$OUT_DIR/lib/libavformat.a \
-    -DFFMPEG_UTIL_LIB=$OUT_DIR/lib/libavutil.a \
-    -DFFMPEG_SWSCALE_LIB=$OUT_DIR/lib/libswscale.a \
-    -DFFMPEG_RESAMPLE_LIB=$OUT_DIR/lib/libavresample.a \
+    -DFFMPEG_INCLUDE_DIRS=$OUT_DIR/include \
+    -DFFMPEG_LIBRARY_DIRS=$OUT_DIR/lib \
     -DCMAKE_PREFIX_PATH=/usr/local \
     -DCMAKE_INSTALL_PREFIX=/usr/local \
+    -DOPENCV_EXTRA_MODULES_PATH=$BLD_BASE/src/opencv_contrib/modules \
     .
 
 make $MAKE_OPTS

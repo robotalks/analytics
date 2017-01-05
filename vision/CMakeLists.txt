@@ -10,8 +10,6 @@ find_library(CARES_LIB cares)
 find_library(CPPNETLIB_URI_LIB cppnetlib-uri)
 find_library(BOOST_SYSTEM_LIB boost_system)
 find_package(OpenCV REQUIRED)
-find_library(AVDEVICE_LIB avdevice)
-find_library(AVFILTER_LIB avfilter)
 find_library(AVFORMAT_LIB avformat)
 find_library(AVCODEC_LIB avcodec)
 find_library(SWSCALE_LIB swscale)
@@ -29,8 +27,6 @@ set(VISION_LIBS
     ${CPPNETLIB_URI_LIB}
     ${BOOST_SYSTEM_LIB}
     ${OpenCV_LIBS}
-    ${AVDEVICE_LIB}
-    ${AVFILTER_LIB}
     ${AVFORMAT_LIB}
     ${AVCODEC_LIB}
     ${SWSCALE_LIB}
