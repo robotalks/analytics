@@ -30,12 +30,14 @@ public:
         options().add_options()
             ("lbp", "use lbp detector", cxxopts::value<bool>())
             ("show", "show recognized area", cxxopts::value<bool>())
+            ("quiet", "quiet, don't print result", cxxopts::value<bool>())
         ;
     }
 
 protected:
     virtual int run() {
         bool show = opt("show").as<bool>();
+        bool quiet = opt("quiet").as<bool>();
 
         FaceDetector detector(exeDir() + "/../share/OpenCV/",
             opt("lbp").as<bool>(), 2, 1, 60);
@@ -47,11 +49,17 @@ protected:
         Mat image;
         while (true) {
             if (!capture(image)) {
+                if (show) {
+                    waitKey(1);
+                }
                 continue;
             }
 
             DetectResult result(&detector, image);
             if (!result.empty()) {
+                if (!quiet) {
+                    cerr << result.json() << endl; cerr.flush();
+                }
                 m_pub.pub(result.json().dump());
             }
             if (show) {
@@ -59,9 +67,7 @@ protected:
                     rectangle(image, obj.rc, obj.type == "smile" ? Scalar(0, 255, 0) : Scalar(255, 0, 0));
                 }
                 imshow("vision", image);
-                if (waitKey(1) >= 0) {
-                    return 0;
-                }
+                waitKey(1);
             }
         }
         if (show) {
