@@ -9,6 +9,7 @@ find_library(MOSQUITTO_LIB mosquitto)
 find_library(CARES_LIB cares)
 find_library(CPPNETLIB_URI_LIB cppnetlib-uri)
 find_library(BOOST_SYSTEM_LIB boost_system)
+find_library(BOOST_THREAD_LIB boost_thread)
 find_package(OpenCV REQUIRED)
 find_library(AVFORMAT_LIB avformat)
 find_library(AVCODEC_LIB avcodec)
@@ -25,6 +26,7 @@ set(VISION_LIBS
     ${MOSQUITTO_LIB}
     ${CARES_LIB}
     ${CPPNETLIB_URI_LIB}
+    ${BOOST_THREAD_LIB}
     ${BOOST_SYSTEM_LIB}
     ${OpenCV_LIBS}
     ${AVFORMAT_LIB}
@@ -40,6 +42,7 @@ set(VISION_LIBS
 
 set(VISION_SRCS
     src/model.cpp
+    src/pipeline.cpp
     src/analyzer.cpp
     src/face_detector.cpp
     src/detection.cpp

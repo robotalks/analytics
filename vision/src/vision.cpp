@@ -9,6 +9,7 @@
 #include "cmn/pubsub.h"
 #include "cmn/mqtt.h"
 #include "cmn/perflog.h"
+#include "vision/pipeline.h"
 #include "face_detector.h"
 
 using namespace std;
@@ -27,6 +28,10 @@ public:
         addModule(&m_mq);
         m_pub.setHandler(std::bind(&App::onMessage, this, std::placeholders::_1));
         addModule(&m_pub);
+        m_pipeline.addFactory("face", [this] {
+            return new FaceDetector(exeDir() + "/../share/OpenCV/", opt("lbp").as<bool>(), 2, 1, 60);
+        });
+        addModule(&m_pipeline);
         options().add_options()
             ("lbp", "use lbp detector", cxxopts::value<bool>())
             ("show", "show recognized area", cxxopts::value<bool>())
@@ -38,9 +43,6 @@ protected:
     virtual int run() {
         bool show = opt("show").as<bool>();
         bool quiet = opt("quiet").as<bool>();
-
-        FaceDetector detector(exeDir() + "/../share/OpenCV/",
-            opt("lbp").as<bool>(), 2, 1, 60);
 
         if (show) {
             namedWindow("vision");
@@ -55,7 +57,7 @@ protected:
                 continue;
             }
 
-            DetectResult result(&detector, image);
+            DetectResult result(&m_pipeline, image);
             if (!result.empty()) {
                 if (!quiet) {
                     cerr << result.json() << endl; cerr.flush();
@@ -79,6 +81,7 @@ protected:
 private:
     MQConnector m_mq;
     PubSub m_pub;
+    PipelineModule m_pipeline;
 
     atomic<Msg*> m_msg;
     mutex m_msg_lock;

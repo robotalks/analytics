@@ -26,7 +26,11 @@ namespace cmn {
     }
 
     void MQConnector::start() {
-        uri mqUrl(m_app->opt("mq-url").as<string>());
+        string url = m_app->opt("mq-url").as<string>();
+        if (url.empty()) {
+            url = "mqtt://127.0.0.1";
+        }
+        uri mqUrl(url);
         if (!mqUrl.is_valid()) {
             throw invalid_argument("mq-url: invalid url");
         }
