@@ -85,11 +85,15 @@ namespace cmn {
     void PubSub::start() {
         m_sub = m_app->opt(m_subOpt).as<string>();
         m_pub = m_app->opt(m_pubOpt).as<string>();
-        m_conn->sub(m_sub, m_handler).wait();
+        if (!m_sub.empty()) {
+            m_conn->sub(m_sub, m_handler).wait();
+        }
     }
 
     void PubSub::stop() {
-        m_conn->unsub(m_sub).wait();
+        if (!m_sub.empty()) {
+            m_conn->unsub(m_sub).wait();
+        }
     }
 
     void PubSub::cleanup() {

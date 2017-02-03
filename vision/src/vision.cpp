@@ -2,8 +2,11 @@
 #include <chrono>
 #include <atomic>
 #include <mutex>
+#include <stdexcept>
+#include <cstdlib>
 #include <condition_variable>
-#include <boost/asio/buffer.hpp>
+#include <boost/asio.hpp>
+#include <boost/system/error_code.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include "cmn/app.h"
 #include "cmn/pubsub.h"
@@ -22,7 +25,8 @@ class App : public cmn::Application {
 public:
     App(int argc, char** argv)
         : cmn::Application(argc, argv),
-          m_pub(&m_mq) {
+          m_pub(&m_mq),
+          m_udpsock(m_io) {
         m_msg = nullptr;
         m_mq.addFactory(MQTTAdapter::factory());
         addModule(&m_mq);
@@ -33,6 +37,7 @@ public:
         });
         addModule(&m_pipeline);
         options().add_options()
+            ("udp", "capture image using UDP", cxxopts::value<string>())
             ("lbp", "use lbp detector", cxxopts::value<bool>())
             ("show", "show recognized area", cxxopts::value<bool>())
             ("quiet", "quiet, don't print result", cxxopts::value<bool>())
@@ -41,6 +46,8 @@ public:
 
 protected:
     virtual int run() {
+        startUDPCapture(opt("udp").as<string>());
+
         bool show = opt("show").as<bool>();
         bool quiet = opt("quiet").as<bool>();
 
@@ -82,10 +89,94 @@ private:
     MQConnector m_mq;
     PubSub m_pub;
     PipelineModule m_pipeline;
+    io_service m_io;
+    ip::udp::socket m_udpsock;
 
     atomic<Msg*> m_msg;
     mutex m_msg_lock;
     condition_variable m_msg_cond;
+
+    class UDPMsg : public Msg {
+    public:
+        UDPMsg() : m_owned(true) {
+            m_data = new char[MAX_IMAGE_SIZE];
+            m_size = MAX_IMAGE_SIZE;
+        }
+
+        UDPMsg(const UDPMsg& m, size_t sz)
+        : m_owned(false), m_data(m.m_data), m_size(sz) {
+
+        }
+
+        virtual ~UDPMsg() {
+            if (m_owned) {
+                delete []m_data;
+            }
+        }
+
+        mutable_buffers_1 recvBuf() { return buffer(m_data, m_size); }
+
+        virtual const string& topic() const { return m_topic; }
+        virtual const_buffer raw() const { return const_buffer(m_data, m_size); }
+        virtual Msg* copy() const { return new UDPMsg(*this); }
+
+    protected:
+        UDPMsg(const UDPMsg& m) : m_owned(true) {
+            m_data = new char[m.m_size];
+            m_size = m.m_size;
+            memcpy(m_data, m.m_data, m_size);
+        }
+
+    private:
+        string m_topic;
+        char *m_data;
+        size_t m_size;
+        bool m_owned;
+
+        const size_t MAX_IMAGE_SIZE = 4096*1024;
+    };
+
+    void startUDPCapture(const string& addr) {
+        if (addr.empty()) {
+            return;
+        }
+
+        auto pos = addr.find_first_of(":");
+        if (pos == string::npos) {
+            throw invalid_argument("udp address: port unspecified");
+        }
+        int port = atoi(addr.substr(pos+1).c_str());
+        if (pos <= 0) {
+            throw invalid_argument("udp address: invalid port");
+        }
+        boost::system::error_code ec;
+        ip::address ipaddr = ip::address::from_string(addr.substr(0, pos), ec);
+        if (ec) {
+            throw invalid_argument("udp_address: " + ec.message());
+        }
+        ip::udp::endpoint endpoint(ipaddr, port);
+        m_udpsock.open(endpoint.protocol());
+        m_udpsock.set_option(ip::udp::socket::reuse_address(true));
+        if (ipaddr.is_multicast()) {
+            m_udpsock.bind(ip::udp::endpoint(ip::address_v4::any(), port));
+            m_udpsock.set_option(ip::multicast::join_group(ipaddr));
+        } else {
+            m_udpsock.bind(endpoint);
+        }
+
+        thread t([this] { recvFromUDP(); });
+        t.detach();
+    }
+
+    void recvFromUDP() {
+        UDPMsg msg;
+        ip::udp::endpoint from;
+        while (true) {
+            size_t sz = m_udpsock.receive_from(msg.recvBuf(), from);
+            UDPMsg m(msg, sz);
+            onMessage(&m);
+        }
+    }
 
     bool capture(Mat& image) {
         auto msg = m_msg.exchange(nullptr);
