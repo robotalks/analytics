@@ -106,6 +106,9 @@ namespace cmn {
 
     future<void> PubSub::pub(const ::std::string& subTopic,
         const ::boost::asio::const_buffer& data, const PubOptions& opts) {
+        if (m_pub.empty()) {
+            return promise<void>().get_future();
+        }
         auto topic = m_pub;
         if (!subTopic.empty()) {
             topic += "/" + subTopic;

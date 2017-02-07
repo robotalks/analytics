@@ -40,16 +40,25 @@ set(VISION_LIBS
     ${BZIP2_LIB}
 )
 
-set(VISION_SRCS
-    src/model.cpp
-    src/pipeline.cpp
-    src/analyzer.cpp
-    src/face_detector.cpp
-    src/detection.cpp
+add_executable(vision
+    src/vision/model.cpp
+    src/vision/pipeline.cpp
+    src/vision/app.cpp
+    src/vision/capture_cv.cpp
+    src/vision/capture_udp.cpp
+    src/detect/face.cpp
+    src/detect/motion_simple.cpp
+    src/vision.cpp
 )
-
-add_executable(vision ${VISION_SRCS} src/vision.cpp)
 target_link_libraries(vision -Wl,--start-group ${VISION_LIBS} -Wl,--end-group -lpthread)
 
-add_executable(vision-perf ${VISION_SRCS} src/perf.cpp)
+add_executable(vision-perf
+    src/vision/model.cpp
+    src/vision/pipeline.cpp
+    src/vision/app.cpp
+    src/detect/face.cpp
+    src/perf/analyzer.cpp
+    src/perf/detection.cpp
+    src/perf/perf.cpp
+)
 target_link_libraries(vision-perf -Wl,--start-group ${VISION_LIBS} -Wl,--end-group)

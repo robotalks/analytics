@@ -77,7 +77,7 @@ struct FunctorFactory : DetectorFactory {
     }
 };
 
-void PipelineModule::addFactory(const string&name,
+void PipelineModule::addFactory(const string& name,
                                 function<Detector*()> factory) {
     addFactory(name, new FunctorFactory(factory));
 }

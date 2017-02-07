@@ -1,6 +1,6 @@
 #include "detection.h"
 #include "analyzer.h"
-#include "face_detector.h"
+#include "vision/detect/face.h"
 
 using namespace std;
 using namespace cmn;
