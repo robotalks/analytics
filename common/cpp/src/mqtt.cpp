@@ -159,7 +159,9 @@ namespace cmn {
     MQTTAdapter::MQTTAdapter(const string& clientId)
     :   m_clientId(clientId),
         m_host("localhost"), m_port(1883),
-        m_keepalive(60) {
+        m_keepalive(60),
+        m_connOp(nullptr), m_disconnOp(nullptr),
+        m_loop(false) {
         m_mosquitto = mosquitto_new(m_clientId.empty() ? nullptr : m_clientId.c_str(), true, this);
         mosquitto_connect_callback_set(m_mosquitto, MQTTCallbacks::connect);
         mosquitto_disconnect_callback_set(m_mosquitto, MQTTCallbacks::disconnect);
