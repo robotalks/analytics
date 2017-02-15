@@ -48,6 +48,7 @@ add_executable(vision
     src/vision/capture_udp.cpp
     src/detect/face.cpp
     src/detect/motion_simple.cpp
+    src/detect/track.cpp
     src/vision.cpp
 )
 target_link_libraries(vision -Wl,--start-group ${VISION_LIBS} -Wl,--end-group -lpthread)

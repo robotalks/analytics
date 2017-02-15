@@ -47,17 +47,15 @@ ClassifyModel::ClassifyModel(const string& type, const string& fn,
   m_flags(flags) {
 }
 
-size_t ClassifyModel::detect(const Mat& image, DetectedObjectList& objects) {
+void ClassifyModel::detect(const Mat& image, DetectedObjectList& objects) {
     vector<Rect> rects;
     m_classifier.detectMultiScale(image, rects, m_scaleFactor, m_minNeighbors, m_flags, m_minSize, m_maxSize);
-    size_t count = 0;
     for (auto& r : rects) {
         objects.push_back({r, m_type});
-        count ++;
         auto subImg = image(r);
         for (auto child : children()) {
             DetectedObjectList objs;
-            count += child->detect(image, objs);
+            child->detect(image, objs);
             for (auto& obj : objs) {
                 obj.rc.x += r.x;
                 obj.rc.y += r.y;
@@ -65,25 +63,22 @@ size_t ClassifyModel::detect(const Mat& image, DetectedObjectList& objects) {
             }
         }
     }
-    return count;
 }
 
-size_t AltModel::detect(const Mat& image, DetectedObjectList& objects) {
+void AltModel::detect(const Mat& image, DetectedObjectList& objects) {
+    auto count = objects.size();
     for (auto child : children()) {
-        auto count = child->detect(image, objects);
-        if (count > 0) {
-            return count;
+        child->detect(image, objects);
+        if (objects.size() > count) {
+            break;
         }
     }
-    return 0;
 }
 
-size_t MultiModel::detect(const Mat& image, DetectedObjectList& objects) {
-    size_t count = 0;
+void MultiModel::detect(const Mat& image, DetectedObjectList& objects) {
     for (auto child : children()) {
-        count += child->detect(image, objects);
+        child->detect(image, objects);
     }
-    return 0;
 }
 
 }

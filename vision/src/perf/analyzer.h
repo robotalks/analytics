@@ -7,7 +7,7 @@ class Analyzer : public ::vision::Detector {
 public:
     Analyzer(const ::std::string& dir);
 
-    size_t detect(const ::cv::Mat& image, ::vision::DetectedObjectList& objects);
+    void detect(const ::cv::Mat& image, ::vision::DetectedObjectList& objects);
 
 private:
     ::vision::MultiModel m_models;

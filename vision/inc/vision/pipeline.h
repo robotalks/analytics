@@ -25,12 +25,15 @@ namespace vision {
         void addFactory(const ::std::string& name, DetectorFactory*);
         void addFactory(const ::std::string& name, ::std::function<Detector*()>);
 
+        DetectorFactory* factoryFor(const ::std::string& name) const;
+        Detector* createDetector(const ::std::string& name) const;
+
         void initialize(::cmn::Application*);
         void start();
         void stop();
         void cleanup() {}
 
-        size_t detect(const ::cv::Mat &image, DetectedObjectList &objects);
+        void detect(const ::cv::Mat &image, DetectedObjectList &objects);
 
         ::cmn::Application* app() const { return m_app; }
 

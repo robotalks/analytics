@@ -7,7 +7,7 @@ targets:
     after:
       - toolchain
     cmds:
-      - unpack-url.sh zlib http://zlib.net/zlib-1.2.8.tar.gz
+      - unpack-url.sh zlib http://zlib.net/zlib-1.2.11.tar.gz
 
   build-zlib-[arch:amd64,armhf]:
     description: build zlib

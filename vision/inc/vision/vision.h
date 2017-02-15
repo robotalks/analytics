@@ -15,6 +15,11 @@ struct DetectedObject {
     ::cv::Rect rc;
     ::std::string type;
 
+    DetectedObject() { }
+    DetectedObject(const ::cv::Rect& _rc, const ::std::string& _type)
+    : rc(_rc), type(_type) {
+    }
+
     nlohmann::json json() const;
     operator nlohmann::json() const { return json(); }
 };
@@ -25,7 +30,7 @@ struct DetectedObjectList : public ::std::list<DetectedObject> {
 };
 
 struct Detector : ::cmn::Interface {
-    virtual size_t detect(const ::cv::Mat &image, DetectedObjectList &objects) = 0;
+    virtual void detect(const ::cv::Mat &image, DetectedObjectList &objects) = 0;
 };
 
 class Model : public Detector {
@@ -57,7 +62,7 @@ public:
     const ::cv::Size& maxSize() const { return m_maxSize; }
     ClassifyModel& maxSize(const ::cv::Size& size) { m_maxSize = size; return *this; }
 
-    size_t detect(const ::cv::Mat &image, DetectedObjectList &objects);
+    void detect(const ::cv::Mat &image, DetectedObjectList &objects);
 
 private:
     ::std::string m_type;
@@ -72,13 +77,13 @@ private:
 class AltModel : public Model {
 public:
     AltModel() {}
-    size_t detect(const ::cv::Mat &image, DetectedObjectList &objects);
+    void detect(const ::cv::Mat &image, DetectedObjectList &objects);
 };
 
 class MultiModel : public Model {
 public:
     MultiModel() {}
-    size_t detect(const ::cv::Mat &image, DetectedObjectList &objects);
+    void detect(const ::cv::Mat &image, DetectedObjectList &objects);
 };
 
 struct DetectResult {

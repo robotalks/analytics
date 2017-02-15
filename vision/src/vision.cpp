@@ -17,6 +17,7 @@ public:
 
         FaceDetector::reg(this, Scalar(255, 0, 0));
         SimpleMotionDetector::reg(this, Scalar(0, 0, 255));
+        ObjectTracker::reg(this, Scalar(255, 0, 255));
         finalizePipeline();
 
         objectColor("smile", Scalar(0, 255, 0));

@@ -82,6 +82,19 @@ void PipelineModule::addFactory(const string& name,
     addFactory(name, new FunctorFactory(factory));
 }
 
+DetectorFactory* PipelineModule::factoryFor(const string& name) const {
+    auto it = m_factories.find(name);
+    return it == m_factories.end() ? nullptr : it->second;
+}
+
+Detector* PipelineModule::createDetector(const string& name) const {
+    auto f = factoryFor(name);
+    if (f != nullptr) {
+        return f->createDetector();
+    }
+    return nullptr;
+}
+
 void PipelineModule::initialize(Application* app) {
     m_app = app;
     app->options().add_options()
@@ -91,24 +104,26 @@ void PipelineModule::initialize(Application* app) {
 }
 
 void PipelineModule::start() {
-    unordered_set<string> disabled;
+    unordered_set<string> enabled;
     for (auto& name : m_app->opt("detectors").as<vector<string>>()) {
-        if (!name.empty() && (name[0] == '-' || name[0] == '!')) {
+        if (!name.empty() && (name[0] == '~' || name[0] == '!')) {
             if (name.length() == 1) {
                 for (auto& p : m_factories) {
-                    disabled.insert(p.first);
+                    enabled.clear();
                 }
             } else {
-                disabled.insert(name.substr(1));
+                enabled.erase(name.substr(1));
             }
         } else if (name == "*") {
-            disabled.clear();
+            for (auto& p : m_factories) {
+                enabled.insert(p.first);
+            }
         } else {
-            disabled.erase(name);
+            enabled.insert(name);
         }
     }
     for (auto& p : m_factories) {
-        if (disabled.find(p.first) == disabled.end()) {
+        if (enabled.find(p.first) != enabled.end()) {
             m_workers.push_back(new DetectWorker(p.second->createDetector()));
         }
     }
@@ -121,16 +136,14 @@ void PipelineModule::stop() {
     m_workers.clear();
 }
 
-size_t PipelineModule::detect(const Mat &image, DetectedObjectList &objects) {
+void PipelineModule::detect(const Mat &image, DetectedObjectList &objects) {
     list<future<DetectedObjectList>> futures;
     for (auto w : m_workers) {
         futures.push_back(w->detect(&image));
     }
-    size_t count = objects.size();
     for (auto& f : futures) {
         objects.splice(objects.end(), f.get());
     }
-    return objects.size() - count;
 }
 
 }

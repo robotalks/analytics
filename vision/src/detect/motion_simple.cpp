@@ -11,13 +11,13 @@ SimpleMotionDetector::SimpleMotionDetector(const Size &blurSize, double areaMin)
 
 }
 
-size_t SimpleMotionDetector::detect(const Mat& image, DetectedObjectList& objects) {
+void SimpleMotionDetector::detect(const Mat& image, DetectedObjectList& objects) {
     Mat gray;
     cvtColor(image, gray, CV_BGR2GRAY);
     GaussianBlur(gray, gray, m_blurSize, 0);
     if (m_prev.empty()) {
         m_prev = gray;
-        return 0;
+        return;
     }
 
     Mat thresh;
@@ -28,19 +28,11 @@ size_t SimpleMotionDetector::detect(const Mat& image, DetectedObjectList& object
     vector<vector<Point>> contours;
     findContours(thresh.clone(), contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
 
-    size_t count = 0;
 	for (auto& c : contours) {
-		if (contourArea(c) < m_areaMin) {
-            continue;
+		if (contourArea(c) >= m_areaMin) {
+		    objects.push_back(DetectedObject(boundingRect(c), "motion"));
         }
-
-        DetectedObject obj;
-        obj.rc = boundingRect(c);
-        obj.type = "motion";
-		objects.push_back(obj);
-        count ++;
     }
-    return count;
 }
 
 void SimpleMotionDetector::reg(App* app, const ::std::string& name) {
@@ -51,7 +43,7 @@ void SimpleMotionDetector::reg(App* app, const ::std::string& name) {
     app->pipeline()->addFactory(name, [app] {
         auto blurSize = app->opt("motion-blur").as<int>();
         if (blurSize <= 0) {
-            blurSize = 10;
+            blurSize = 11;
         }
         return new SimpleMotionDetector(
             Size(blurSize, blurSize),

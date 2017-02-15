@@ -24,6 +24,6 @@ Analyzer::Analyzer(const string& dir)
     m_models.add(&m_bodies);
 }
 
-size_t Analyzer::detect(const Mat& image, DetectedObjectList& objects) {
-    return m_models.detect(image, objects);
+void Analyzer::detect(const Mat& image, DetectedObjectList& objects) {
+    m_models.detect(image, objects);
 }
