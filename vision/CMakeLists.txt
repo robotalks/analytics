@@ -40,6 +40,9 @@ set(VISION_LIBS
     ${BZIP2_LIB}
 )
 
+add_executable(cap src/cap.cpp)
+target_link_libraries(cap -Wl,--start-group ${VISION_LIBS} -Wl,--end-group -lpthread)
+
 add_executable(vision
     src/vision/model.cpp
     src/vision/pipeline.cpp

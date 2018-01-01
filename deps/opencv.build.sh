@@ -13,6 +13,7 @@ fi
 clean_copy_src
 
 patch -p1 < $HMAKE_PROJECT_DIR/deps/opencv.patch
+patch -p1 < $HMAKE_PROJECT_DIR/deps/opencv-arm-tbb.patch
 
 export PKG_CONFIG_PATH=$OUT_DIR/lib/pkgconfig
 cmake $CMAKE_OPTS \

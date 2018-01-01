@@ -25,6 +25,7 @@ targets:
     watches:
       - opencv.build.sh
       - opencv.patch
+      - opencv-arm-tbb.patch
     env:
       - MAKE_OPTS
     cmds:

@@ -7,7 +7,8 @@ namespace vision {
 
 class SimpleMotionDetector : public Detector {
 public:
-    SimpleMotionDetector(const ::cv::Size& blurSize, double areaMin = 0);
+    SimpleMotionDetector(const ::cv::Size& blurSize,
+        double areaMin = 0, double threshold = 25);
 
     void detect(const ::cv::Mat& image, DetectedObjectList& objects);
 
@@ -17,6 +18,7 @@ public:
 private:
     ::cv::Size m_blurSize;
     double m_areaMin;
+    double m_threshold;
     ::cv::Mat m_prev;
 };
 

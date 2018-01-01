@@ -1,0 +1,13 @@
+--- a/3rdparty/tbb/arm_linux_stub.cpp	2017-01-04 21:35:32.724422284 -0800
++++ b/3rdparty/tbb/arm_linux_stub.cpp	2017-01-04 22:18:48.785188975 -0800
+@@ -3,8 +3,9 @@
+ namespace tbb {
+ namespace internal {
+
+-void affinity_helper::protect_affinity_mask() {}
++void affinity_helper::protect_affinity_mask(bool) {}
+ affinity_helper::~affinity_helper() {}
++void destroy_process_mask() {}
+
+ }
+ }
