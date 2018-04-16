@@ -8,7 +8,6 @@ targets:
       - build-dep-cxxopts
       - build-dep-boost-$[arch]
       - build-dep-cpp-netlib-$[arch]
-      - build-dep-mosquitto-$[arch]
     watches:
       - inc
       - src
@@ -17,6 +16,6 @@ targets:
     env:
       - MAKE_OPTS
     cmds:
-      - build-cmake.sh $[arch] common/cpp Release libcmn.a
+      - build-cmake.sh $[arch] common/cpp libcmn.a
     artifacts:
       - /out/$[arch]/lib/libcmn.a

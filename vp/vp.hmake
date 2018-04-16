@@ -11,7 +11,6 @@ targets:
       - build-dep-opencv-$[arch]
       - build-dep-gflags-$[arch]
       - build-dep-glog-$[arch]
-      - build-dep-mosquitto-$[arch]
       - build-dep-ncsdk-$[arch]
     watches:
       - inc
@@ -20,7 +19,7 @@ targets:
     env:
       - MAKE_OPTS
     cmds:
-      - build-cmake.sh $[arch] vp Release libvp.a vpd
+      - build-cmake.sh $[arch] vp libvp.a vpd
     artifacts:
       - /out/$[arch]/lib/libvp.a
       - /out/$[arch]/bin/vpd

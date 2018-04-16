@@ -5,13 +5,11 @@ set(CMAKE_CXX_STANDARD 11)
 find_package(OpenCV REQUIRED)
 find_package(gflags REQUIRED CONFIG)
 find_package(glog   REQUIRED CONFIG)
-find_package(Libwebsockets REQUIRED)
 
 include_directories(
     ${glog_INCLUDE_DIR}
     ${gflags_INCLUDE_DIR}
     ${OpenCV_INCLUDE_DIRS}
-    ${LIBWEBSOCKETS_INCLUDE_DIRS}
     "inc"
 )
 
@@ -20,8 +18,6 @@ set(LIBS
     gflags
     ${OpenCV_LIBS}
     mosquitto
-    websockets
-    cares
     ssl
     z
     mvnc
