@@ -5,9 +5,9 @@ targets:
   build-common-[arch:amd64,armhf]:
     description: common C++ library
     after:
-      - build-cxxopts
-      - build-boost-$[arch]
-      - build-cpp-netlib-$[arch]
+      - build-dep-cxxopts
+      - build-dep-boost-$[arch]
+      - build-dep-cpp-netlib-$[arch]
       - build-dep-mosquitto-$[arch]
     watches:
       - inc
