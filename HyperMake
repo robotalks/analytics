@@ -51,5 +51,4 @@ settings:
   exec-target: exec
   exec-shell: /bin/bash
   docker:
-    image: robotalks/toolchain:latest
-    src-volume: /go/src/github.com/robotalks/analytics
+    image: robotalks/toolchain:stretch-0

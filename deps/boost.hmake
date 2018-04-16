@@ -13,7 +13,7 @@ targets:
     description: build boost library
     after:
       - get-boost
-      - build-zlib-$[arch]
+      - build-dep-zlib-$[arch]
       - build-bzip2-$[arch]
     watches:
       - boost.build.sh

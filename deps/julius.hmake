@@ -12,7 +12,7 @@ targets:
   build-julius-[arch:amd64,armhf]:
     description: build julius
     after:
-      - build-zlib-$[arch]
+      - build-dep-zlib-$[arch]
       - get-julius
     watches:
       - julius.build.sh

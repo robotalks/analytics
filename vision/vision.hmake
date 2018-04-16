@@ -8,9 +8,9 @@ targets:
   build-vision-[arch:amd64,armhf]:
     description: build vision analyzer
     after:
-      - build-nlohmann-json
-      - build-ffmpeg-$[arch]
-      - build-opencv-$[arch]
+      - build-dep-nlohmann-json
+      - build-dep-ffmpeg-$[arch]
+      - build-dep-opencv-$[arch]
       - build-common-$[arch]
     watches:
       - inc

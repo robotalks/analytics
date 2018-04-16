@@ -8,7 +8,7 @@ targets:
       - build-cxxopts
       - build-boost-$[arch]
       - build-cpp-netlib-$[arch]
-      - build-mosquitto-$[arch]
+      - build-dep-mosquitto-$[arch]
     watches:
       - inc
       - src

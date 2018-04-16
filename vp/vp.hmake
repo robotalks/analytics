@@ -1,0 +1,26 @@
+---
+format: hypermake.v0
+
+name: vp
+description: Vision Processing
+
+targets:
+  build-vp-[arch:amd64,armhf]:
+    description: build vision processing daemon
+    after:
+      - build-dep-opencv-$[arch]
+      - build-dep-gflags-$[arch]
+      - build-dep-glog-$[arch]
+      - build-dep-mosquitto-$[arch]
+      - build-dep-ncsdk-$[arch]
+    watches:
+      - inc
+      - src
+      - CMakeLists.txt
+    env:
+      - MAKE_OPTS
+    cmds:
+      - build-cmake.sh $[arch] vp Release libvp.a vpd
+    artifacts:
+      - /out/$[arch]/lib/libvp.a
+      - /out/$[arch]/bin/vpd
