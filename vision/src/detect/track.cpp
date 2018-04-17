@@ -6,8 +6,8 @@ namespace vision {
 using namespace std;
 using namespace cv;
 
-ObjectTracker::ObjectTracker(shared_ptr<Detector> objDetector, const string& trackingAlgo)
-: m_detector(objDetector), m_algorithm(trackingAlgo) {
+ObjectTracker::ObjectTracker(shared_ptr<Detector> objDetector)
+: m_detector(objDetector) {
 }
 
 void ObjectTracker::detect(const Mat& image, DetectedObjectList& objects) {
@@ -16,9 +16,9 @@ void ObjectTracker::detect(const Mat& image, DetectedObjectList& objects) {
         m_detector->detect(image, objs);
         for (auto& o : objs) {
             Object obj(o);
-            obj.tracker = Tracker::create(m_algorithm);
+            obj.tracker = TrackerKCF::create();
             if (obj.tracker == nullptr) {
-                throw invalid_argument("track-algo: " + m_algorithm);
+                throw runtime_error("create KCF tracker");
             }
             obj.tracker->init(image, obj.rc);
             m_objs.push_back(obj);
@@ -41,14 +41,9 @@ void ObjectTracker::detect(const Mat& image, DetectedObjectList& objects) {
 
 void ObjectTracker::reg(App* app, const string& name) {
     app->options().add_options()
-        ("track-algo", "tracking algorithm (KCF)", cxxopts::value<string>())
         ("track-detector", "detector for initial detection (face)", cxxopts::value<string>())
     ;
     app->pipeline()->addFactory(name, [app] {
-        auto algo = app->opt("track-algo").as<string>();
-        if (algo.empty()) {
-            algo = "KCF";
-        }
         auto detectorName = app->opt("track-detector").as<string>();
         if (detectorName.empty()) {
             detectorName = "face";
@@ -57,7 +52,7 @@ void ObjectTracker::reg(App* app, const string& name) {
         if (!detector) {
             throw invalid_argument("track-detector: " + detectorName);
         }
-        return new ObjectTracker(shared_ptr<Detector>(detector), algo);
+        return new ObjectTracker(shared_ptr<Detector>(detector));
     });
 }
 

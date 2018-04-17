@@ -10,7 +10,7 @@ namespace vision {
 
 class ObjectTracker : public Detector {
 public:
-    ObjectTracker(::std::shared_ptr<Detector> objDetector, const ::std::string& trackingAlgo);
+    ObjectTracker(::std::shared_ptr<Detector> objDetector);
 
     void detect(const ::cv::Mat& image, DetectedObjectList& objects);
 
@@ -19,7 +19,6 @@ public:
 
 private:
     ::std::shared_ptr<Detector> m_detector;
-    ::std::string m_algorithm;
 
     struct Object {
         DetectedObject o;

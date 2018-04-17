@@ -20,7 +20,7 @@ targets:
     env:
       - MAKE_OPTS
     cmds:
-      - build-cmake.sh $[arch] vision Release vision vision-perf
+      - build-cmake.sh $[arch] vision vision vision-perf
     artifacts:
       - /out/$[arch]/bin/vision
       - /out/$[arch]/bin/vision-perf

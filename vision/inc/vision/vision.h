@@ -20,14 +20,20 @@ struct DetectedObject {
     : rc(_rc), type(_type) {
     }
 
-    nlohmann::json json() const;
-    operator nlohmann::json() const { return json(); }
+    ::nlohmann::json json() const;
 };
 
+inline void to_json(::nlohmann::json& j, const DetectedObject& o) {
+    j = o.json();
+}
+
 struct DetectedObjectList : public ::std::list<DetectedObject> {
-    nlohmann::json json() const;
-    operator nlohmann::json() const { return json(); }
+    ::nlohmann::json json() const;
 };
+
+inline void to_json(::nlohmann::json& j, const DetectedObjectList& o) {
+    j = o.json();
+}
 
 struct Detector : ::cmn::Interface {
     virtual void detect(const ::cv::Mat &image, DetectedObjectList &objects) = 0;
@@ -93,10 +99,13 @@ struct DetectResult {
     DetectResult() { }
     DetectResult(Detector*, const ::cv::Mat&);
 
-    nlohmann::json json() const;
-    operator nlohmann::json() const { return json(); }
+    ::nlohmann::json json() const;
 
     bool empty() const { return objects.empty(); }
 };
+
+inline void to_json(::nlohmann::json& j, const DetectResult& o) {
+    j = o.json();
+}
 
 }
