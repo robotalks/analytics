@@ -3,6 +3,7 @@
 
 #include <string>
 #include "vp/graph.h"
+#include "vp/mqtt/mqtt.h"
 
 namespace vp {
     struct WrapOp {
@@ -60,6 +61,16 @@ namespace vp {
         int   category;
         float confidence;
         int   x0, y0, x1, y1;
+    };
+
+    struct DetectBoxesPub {
+        struct Op {
+            MQTTClient *client;
+            ::std::string topic;
+            Op(MQTTClient *c, const ::std::string& t) : client(c), topic(t) { }
+            void operator() (Graph::Ctx);
+            Graph::OpFunc operator() () const { return *const_cast<Op*>(this); }
+        };
     };
 }
 

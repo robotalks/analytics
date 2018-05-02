@@ -45,7 +45,7 @@ public:
             g->addOp("imgid", {"input"}, {"id"}, ImageId::Op());
             g->addOp("decode", {"input"}, {"pixels"}, CvImageDecode::Op());
             g->addOp("detect", {"pixels"}, {"objects"}, SSDMobileNet::Op(model.get()));
-            g->addOp("publish", {"pixels", "id", "objects"}, {}, MQTTClient::Op(m_mqtt_client.get(), FLAGS_mqtt_topic));
+            g->addOp("publish", {"pixels", "id", "objects"}, {}, DetectBoxesPub::Op(m_mqtt_client.get(), FLAGS_mqtt_topic));
             m_pipeline.addGraph(g.get());
             m_ncs.push_back(move(ncs));
             m_models.push_back(move(model));

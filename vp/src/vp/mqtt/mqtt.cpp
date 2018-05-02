@@ -1,5 +1,6 @@
 #include <cstring>
 #include <stdexcept>
+#include <glog/logging.h>
 #include <opencv2/core/core.hpp>
 
 #include "vp/operators.h"
@@ -30,7 +31,6 @@ namespace vp {
             reinterpret_cast<MQTTClient*>(thiz)->onPublish(mid);
         }
 
-        /*
         static void subscribe(struct mosquitto*, void* thiz, int mid, int qos, const int* granted_qos) {
             reinterpret_cast<MQTTClient*>(thiz)->onSubscribe(mid, qos, granted_qos);
         }
@@ -44,9 +44,8 @@ namespace vp {
         }
 
         static void logging(struct mosquitto*, void* thiz, int level, const char* str) {
-            //cerr << "mqtt: [log] " << str << endl; cerr.flush();
+            VLOG(8) << "mqtt[" << level << "] " << str;
         }
-        */
     };
 
     static string make_error_msg(int rc, const string& errmsg) {
@@ -96,10 +95,10 @@ namespace vp {
         mosquitto_connect_callback_set(m_mosquitto, MQTTCallbacks::connect);
         mosquitto_disconnect_callback_set(m_mosquitto, MQTTCallbacks::disconnect);
         mosquitto_publish_callback_set(m_mosquitto, MQTTCallbacks::publish);
-        //mosquitto_subscribe_callback_set(m_mosquitto, MQTTCallbacks::subscribe);
-        //mosquitto_unsubscribe_callback_set(m_mosquitto, MQTTCallbacks::unsubscribe);
-        //mosquitto_message_callback_set(m_mosquitto, MQTTCallbacks::message);
-        //mosquitto_log_callback_set(m_mosquitto, MQTTCallbacks::logging);
+        mosquitto_subscribe_callback_set(m_mosquitto, MQTTCallbacks::subscribe);
+        mosquitto_unsubscribe_callback_set(m_mosquitto, MQTTCallbacks::unsubscribe);
+        mosquitto_message_callback_set(m_mosquitto, MQTTCallbacks::message);
+        mosquitto_log_callback_set(m_mosquitto, MQTTCallbacks::logging);
     }
 
     MQTTClient::~MQTTClient() {
@@ -155,6 +154,50 @@ namespace vp {
         );
     }
 
+    future<void> MQTTClient::subscribe(const string& topic, Handler callback) {
+        {
+            lock_guard<mutex> g(m_subs_lock);
+            auto insertion = m_subs.insert(make_pair(topic, list<Handler>()));
+            insertion.first->second.push_back(callback);
+            if (!insertion.second) {
+                promise<void> p;
+                p.set_value();
+                return p.get_future();
+            }
+        }
+        int mid = 0;
+        return make_promise(
+            mosquitto_subscribe(m_mosquitto, &mid, topic.c_str(), 0),
+            "subscribe error",
+            [this, &mid] (promise<void>* p) {
+                lock_guard<mutex> g(m_sub_ops_lock);
+                m_sub_ops[mid] = p;
+            }
+        );
+    }
+
+    future<void> MQTTClient::unsubscribe(const string& topic) {
+        {
+            lock_guard<mutex> g(m_subs_lock);
+            auto it = m_subs.find(topic);
+            if (it == m_subs.end()) {
+                promise<void> p;
+                p.set_value();
+                return p.get_future();
+            }
+            m_subs.erase(it);
+        }
+        int mid = 0;
+        return make_promise(
+            mosquitto_unsubscribe(m_mosquitto, &mid, topic.c_str()),
+            "unsubscribe error",
+            [this, &mid] (promise<void>* p) {
+                lock_guard<mutex> g(m_sub_ops_lock);
+                m_sub_ops[mid] = p;
+            }
+        );
+    }
+
     void MQTTClient::onConnect(int rc) {
         lock_guard<mutex> g(m_conn_lock);
         complete_promise((promise<void>*)m_conn_op, rc, "connect error");
@@ -175,20 +218,37 @@ namespace vp {
         complete_op(m_pub_ops_lock, m_pub_ops, mid);
     }
 
-    void MQTTClient::Op::operator() (Graph::Ctx ctx) {
-        const cv::Mat& m = ctx.in(0)->as<cv::Mat>();
-        const ImageId& id = ctx.in(1)->as<ImageId>();
-        const vector<DetectBox>& boxes = ctx.in(2)->as<vector<DetectBox>>();
-        char cstr[1024];
-        sprintf(cstr, "{\"src\":\"%s\",\"seq\":%llu,\"size\":[%d,%d],\"boxes\":[",
-            id.src.c_str(), id.seq, m.cols, m.rows);
-        string str(cstr);
-        for (auto& b : boxes) {
-            sprintf(cstr, "{\"class\":%d,\"score\":%f,\"rc\":[%d,%d,%d,%d]},",
-                b.category, b.confidence, b.x0, b.y0, b.x1, b.y1);
-            str += cstr;
+    void MQTTClient::onSubscribe(int mid, int qos, const int* granted_qos) {
+        complete_op(m_sub_ops_lock, m_sub_ops, mid);
+    }
+
+    void MQTTClient::onUnsubscribe(int mid) {
+        complete_op(m_sub_ops_lock, m_sub_ops, mid);
+    }
+
+    void MQTTClient::onMessage(const struct mosquitto_message* msg) {
+        if (msg->topic == nullptr) {
+            return;
         }
-        str = str.substr(0, str.length()-1) + "]}";
-        client->publish(topic, str);
+        list<Handler> handlers;
+        {
+            lock_guard<mutex> g(m_subs_lock);
+            for (auto v : m_subs) {
+                bool result = false;
+                int rc = mosquitto_topic_matches_sub(v.first.c_str(), msg->topic, &result);
+                if (rc == MOSQ_ERR_SUCCESS && result) {
+                    for (auto h : v.second) {
+                        handlers.push_back(h);
+                    }
+                }
+            }
+        }
+        if (!handlers.empty()) {
+            string topic(msg->topic), message;
+            message.assign(static_cast<char*>(msg->payload), msg->payloadlen);
+            for (auto h : handlers) {
+                h(topic, message);
+            }
+        }
     }
 }

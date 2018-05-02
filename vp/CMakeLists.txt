@@ -33,10 +33,13 @@ add_library(vp
     src/vp/ingress.cpp
     src/vp/ingress/udp.cpp
     src/vp/op/image.cpp
+    src/vp/op/detection.cpp
     src/vp/cv/videocap.cpp
     src/vp/cv/operators.cpp
     src/vp/mqtt/mqtt.cpp
     src/movidius/ncs.cpp
+    src/movidius/fp16.cpp
+    src/movidius/ssd_mobilenet.cpp
 )
 
 add_executable(vpd src/vpd/app.cpp)

@@ -5,9 +5,8 @@
 #include <future>
 #include <mutex>
 #include <unordered_map>
+#include <functional>
 #include <mosquitto.h>
-
-#include "vp/graph.h"
 
 namespace vp {
     struct MQTT {
@@ -17,6 +16,9 @@ namespace vp {
 
     class MQTTClient {
     public:
+        using Handler = ::std::function<void(
+            const ::std::string& topic, const ::std::string& msg)>;
+
         static constexpr unsigned short PORT = 1883;
 
         MQTTClient(const ::std::string& clientId = "", int keepalive = 60);
@@ -25,14 +27,9 @@ namespace vp {
         ::std::future<void> connect(const ::std::string& host, unsigned short port = PORT);
         ::std::future<void> disconnect();
         ::std::future<void> publish(const ::std::string& topic, const ::std::string& msg);
+        ::std::future<void> subscribe(const ::std::string& topic, Handler handler);
+        ::std::future<void> unsubscribe(const ::std::string& topic);
 
-        struct Op {
-            MQTTClient *client;
-            ::std::string topic;
-            Op(MQTTClient *c, const ::std::string& t) : client(c), topic(t) { }
-            void operator() (Graph::Ctx);
-            Graph::OpFunc operator() () const { return *const_cast<Op*>(this); }
-        };
     private:
         ::std::string m_client_id;
         int m_keepalive;
@@ -45,12 +42,17 @@ namespace vp {
         ::std::unordered_map<int, ::std::promise<void>*> m_pub_ops;
         ::std::mutex m_pub_ops_lock;
 
+        ::std::unordered_map<::std::string, ::std::list<Handler> > m_subs;
+        ::std::mutex m_subs_lock;
+        ::std::unordered_map<int, ::std::promise<void>*> m_sub_ops;
+        ::std::mutex m_sub_ops_lock;
+
         void onConnect(int);
         void onDisconnect(int);
         void onPublish(int);
-        // void onSubscribe(int, int, const int*);
-        // void onUnsubscribe(int);
-        // void onMessage(const struct mosquitto_message*);
+        void onSubscribe(int, int, const int*);
+        void onUnsubscribe(int);
+        void onMessage(const struct mosquitto_message*);
 
         friend class MQTTCallbacks;
     };
