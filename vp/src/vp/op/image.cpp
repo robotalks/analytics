@@ -48,7 +48,7 @@ namespace vp {
                 char *endptr = nullptr;
                 unsigned long long seq = strtoull(comment.c_str()+3, &endptr, 10);
                 if (seq > 0 && seq != ULLONG_MAX &&
-                    *endptr == '@' && endptr[1] != 0) {
+                    *endptr == '@') {
                     id.seq = seq;
                     id.src = endptr+1;
                     return true;
