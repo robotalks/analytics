@@ -1,3 +1,5 @@
+#include <stdlib.h>
+#include <cxxabi.h>
 #include <stdexcept>
 
 #include "vp/graph.h"
@@ -33,5 +35,30 @@ namespace vp {
 
     const Graph::Var* Graph::Var::must_set() const {
         return const_cast<Var*>(this)->must_set();
+    }
+
+    static string demangle(const string& str) {
+        string result;
+        int status = 0;
+        auto p = abi::__cxa_demangle(str.c_str(), nullptr, nullptr, &status);
+        if (p != nullptr) {
+            result = p;
+            free(p);
+        }
+        return result;
+    }
+
+    Graph::Var::TypeError::TypeError(const string& name,
+        const string& actual_type, const string& desired_type)
+    : runtime_error("invalid cast var " + name + " from " + demangle(actual_type) + " to " + demangle(desired_type)),
+      m_var_name(name), m_actual_type(actual_type), m_desired_type(desired_type) {
+    }
+
+    string Graph::Var::TypeError::actual_type_demangled() const {
+        return demangle(m_actual_type);
+    }
+
+    string Graph::Var::TypeError::desired_type_demangled() const {
+        return demangle(m_desired_type);
     }
 }

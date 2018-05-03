@@ -8,6 +8,8 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <functional>
+#include <stdexcept>
+#include <typeinfo>
 
 namespace vp {
 
@@ -20,6 +22,7 @@ namespace vp {
         public:
             struct Val {
                 virtual ~Val() {}
+                virtual ::std::string type() const = 0;
             };
 
             Var(const ::std::string& name);
@@ -39,9 +42,32 @@ namespace vp {
             Val* m_val;
 
         public:
+            class TypeError : public ::std::runtime_error {
+            public:
+                TypeError(const ::std::string& var_name,
+                          const ::std::string& actual_type,
+                          const ::std::string& desired_type);
+
+                const ::std::string& var_name() const { return m_var_name; }
+                const ::std::string& actual_type() const { return m_actual_type; }
+                const ::std::string& desired_type() const { return m_desired_type; }
+
+                ::std::string actual_type_demangled() const;
+                ::std::string desired_type_demangled() const;
+
+            private:
+                ::std::string m_var_name;
+                ::std::string m_actual_type;
+                ::std::string m_desired_type;
+            };
+
             template<typename T>
             T& as() const {
-                return dynamic_cast<Graph::Val<T>*>(const_cast<Var*>(must_set())->m_val)->val;
+                auto p = dynamic_cast<Graph::Val<T>*>(const_cast<Var*>(must_set())->m_val);
+                if (p == nullptr) {
+                    throw TypeError(m_name, m_val->type(), Graph::Val<T>().type());
+                }
+                return p->val;
             }
 
             template<typename T>
@@ -60,7 +86,12 @@ namespace vp {
         };
 
         template<typename T>
-        struct Val : public Var::Val { T val; };
+        struct Val : public Var::Val {
+            T val;
+            virtual ::std::string type() const {
+                return typeid(val).name();
+            }
+        };
 
         class Ctx {
         public:
