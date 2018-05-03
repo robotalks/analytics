@@ -42,7 +42,7 @@ namespace vp {
             Val* m_val;
 
         public:
-            class TypeError : public ::std::runtime_error {
+            class TypeError : public ::std::logic_error {
             public:
                 TypeError(const ::std::string& var_name,
                           const ::std::string& actual_type,

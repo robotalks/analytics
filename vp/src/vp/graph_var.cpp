@@ -50,7 +50,7 @@ namespace vp {
 
     Graph::Var::TypeError::TypeError(const string& name,
         const string& actual_type, const string& desired_type)
-    : runtime_error("invalid cast var " + name + " from " + demangle(actual_type) + " to " + demangle(desired_type)),
+    : logic_error("invalid cast var " + name + " from " + demangle(actual_type) + " to " + demangle(desired_type)),
       m_var_name(name), m_actual_type(actual_type), m_desired_type(desired_type) {
     }
 
